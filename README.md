@@ -17,6 +17,7 @@ make
 
 ## Execution
 The circuit format being simulated is `OpenQASM` used by IBM's [Qiskit](https://github.com/Qiskit/qiskit), and the gate set supported in this simulator now contains Pauli-X (x), Controlled-NOT (cx), Toffoli (ccx and mcx). One can find some example benchmarks in [examples] folder. 
+
 For example, to run the random benchmark 10_500.qasm in the [examples] folder, run:
 ```commandline
 ./SliQSim --sim_qasm examples/10_500.qasm
