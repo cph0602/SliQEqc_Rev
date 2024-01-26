@@ -13,6 +13,8 @@
 #include <random>
 #include <cmath>
 #include <vector>
+#include <pthread.h>
+#include <unistd.h>
 #include "../cudd/cudd/cudd.h"
 #include "../cudd/cudd/cuddInt.h"
 #include "../cudd/util/util.h"
@@ -24,34 +26,20 @@ class Simulator
 {
 public:
     // constructor and destructor
-    Simulator(int type, int nshots, int seed, int bitSize, bool reorder, bool alloc) :
-    n(0), r(bitSize), w(4), k(0), inc(3), shift(0), error(0),
-    normalize_factor(1), gatecount(0), NodeCount(0), isMeasure(0), shots(nshots), isReorder(reorder), isAlloc(alloc)
-    , sim_type(type), statevector("null"), gen(std::default_random_engine(seed)){
-    }
     Simulator(int nshots, int seed, int bitSize, bool reorder, bool alloc) :
     n(0), r(bitSize), w(4), k(0), inc(3), shift(0), error(0),
     normalize_factor(1), gatecount(0), NodeCount(0), isMeasure(0), shots(nshots), isReorder(reorder), isAlloc(alloc)
-    , sim_type(0), statevector("null"), gen(std::default_random_engine(seed)){
+    , statevector("null"), gen(std::default_random_engine(seed)){
     }
     ~Simulator()  {
         clear();
     }
 
     /* gates */
-    void Toffoli(int targ, std::vector<int> cont, std::vector<int> ncont);
-    void Fredkin(int swapA , int swapB, std::vector<int> cont);
-    void Peres(int a, int b, int c);
-    void Peres_i(int a, int b, int c);
-    void Hadamard(int iqubit);
-    void rx_pi_2(int iqubit);
-    void ry_pi_2(int iqubit);
-    void Phase_shift(int phase, int iqubit); // phase can only be 2 to the power of an integer
-    void Phase_shift_dagger(int phase, int iqubit);
-    void PauliX(int iqubit);
-    void PauliY(int iqubit);
-    void PauliZ(std::vector<int> iqubit); // Z or CZ
-    void measure(int qreg, int creg);
+    void Toffoli(int targ, std::vector<int> cont, std::vector<int> ncont, int cur_bit);
+    void Fredkin(int swapA , int swapB, std::vector<int> cont, int cur_bit);
+    void PauliX(int iqubit, int cur_bit);
+
 
     /* measurement */
     void measurement();
@@ -59,26 +47,30 @@ public:
 
     /* simulation */
     void init_simulator(int n);
-    void sim_qasm_file(std::string qasm);
+    void sim_qasm_eqc(int cur_bit);
     void sim_qasm(std::string qasm);
     void print_results();
+    bool check_equ();
 
     /* misc */
     void reorder();
     void decode_entries();
     void print_info(double runtime, size_t memPeak);
+    std::string qasmfile;
 
 private:
     DdManager *manager;
     DdNode ***All_Bdd;
+    DdNode **Initial_BDD;
+    DdNode **Single_Bdd;
     int n; // # of qubits
+    int current_bit;
     int r; // resolution of integers
     int w; // # of integers
     int k; // k in algebraic representation
     int inc; // add inc BDDs when overflow occurs, used in alloc_BDD
     int shift; // # of right shifts
     int shots;
-    int sim_type; // 0: statevector, 1: measure
     bool isMeasure;
     bool isReorder;
     bool isAlloc;
@@ -111,12 +103,8 @@ private:
 
     // Clean up Simulator
     void clear() {
-        for (int i = 0; i < w; i++)
-            for (int j = 0; j < r; j++)
-                Cudd_RecursiveDeref(manager, All_Bdd[i][j]);
-        for (int i = 0; i < w; i++)
-            delete[] All_Bdd[i];
-        delete [] All_Bdd;
+        for(int i=0;i<n;i++) Cudd_RecursiveDeref(manager, Single_Bdd[i]);
+        delete[] Single_Bdd;
         measured_qubits_to_clbits.clear();
         measure_outcome.clear();
         Node_Table.clear();

@@ -1,6 +1,15 @@
 #include "Simulator.h"
 #include "util_sim.h"
 
+void writedd(DdNode* dd, char* filename, DdManager* manager){
+  FILE *outfile;
+  outfile = fopen(filename, "w");
+  DdNode **ddnodearray = (DdNode**)malloc(sizeof(DdNode*));
+  ddnodearray[0] = dd;
+  Cudd_DumpDot(manager, 1, ddnodearray, NULL, NULL, outfile);
+  free(ddnodearray);
+  fclose(outfile);
+}
 
 /**Function*************************************************************
 
@@ -16,41 +25,20 @@
 void Simulator::init_state(int *constants)
 {
     DdNode *var, *tmp;
-    All_Bdd = new DdNode **[w];
-    for (int i = 0; i < w; i++)
-        All_Bdd[i] = new DdNode *[r];
-
-    for (int i = 0; i < r; i++)
-    {
-        if (i == 0)
-        {
-            for (int j = 0; j < w - 1; j++)
-            {
-                All_Bdd[j][i] = Cudd_Not(Cudd_ReadOne(manager));
-                Cudd_Ref(All_Bdd[j][i]);
-            }
-            All_Bdd[w - 1][i] = Cudd_ReadOne(manager);
-            Cudd_Ref(All_Bdd[w - 1][i]);
-            for (int j = n - 1; j >= 0; j--)
-            {
-                var = Cudd_bddIthVar(manager, j);
-                if (constants[j] == 0)
-                    tmp = Cudd_bddAnd(manager, Cudd_Not(var), All_Bdd[w - 1][i]);
-                else
-                    tmp = Cudd_bddAnd(manager, var, All_Bdd[w - 1][i]);
-                Cudd_Ref(tmp);
-                Cudd_RecursiveDeref(manager, All_Bdd[w - 1][i]);
-                All_Bdd[w - 1][i] = tmp;
-            }
-        }
+    Single_Bdd = new DdNode *[n];
+    Initial_BDD = new DdNode *[n];
+    for(int i=0;i<n;i++){
+        Single_Bdd[i] = Cudd_ReadOne(manager);
+        Cudd_Ref(Single_Bdd[i]);
+        var = Cudd_bddIthVar(manager, i);
+        if (constants[i] == 0)
+            tmp = Cudd_bddAnd(manager, Cudd_Not(var), Single_Bdd[i]);
         else
-        {
-            for (int j = 0; j < w; j++)
-            {
-                All_Bdd[j][i] = Cudd_Not(Cudd_ReadOne(manager));
-                Cudd_Ref(All_Bdd[j][i]);
-            }
-        }
+            tmp = Cudd_bddAnd(manager, var, Single_Bdd[i]);
+        Cudd_Ref(tmp);
+        Cudd_RecursiveDeref(manager, Single_Bdd[i]);
+        Single_Bdd[i] = tmp;
+        Initial_BDD[i] = tmp;
     }
 }
 

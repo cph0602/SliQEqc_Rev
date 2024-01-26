@@ -2,6 +2,13 @@
 #include "Simulator.h"
 #include "util_sim.h"
 
+// void* threading(void* x){
+//     int* val = (int*) x;
+//     sleep(10);
+//     std::cout<<"Hi"<<*val<<std::endl;
+//     pthread_exit(NULL);
+// }
+
 int main(int argc, char **argv)
 {
     namespace po = boost::program_options;
@@ -11,9 +18,6 @@ int main(int argc, char **argv)
     ("sim_qasm", po::value<std::string>()->implicit_value(""), "simulate qasm file string")
     ("seed", po::value<unsigned int>()->implicit_value(1), "seed for random number generator")
     ("print_info", "print simulation statistics such as runtime, memory, etc.")
-    ("type", po::value<unsigned int>()->default_value(0), "the simulation type being executed.\n" 
-                                                           "0: sampling mode (default option), where the sampled outcomes will be provided. \n"
-                                                           "1: all_amplitude mode, where the final state vector will be shown. ")
     ("shots", po::value<unsigned int>()->default_value(1), "the number of outcomes being sampled in \"sampling mode\". " )
     ("r", po::value<unsigned int>()->default_value(32), "integer bit size.")
     ("reorder", po::value<bool>()->default_value(1), "allow variable reordering or not.\n"
@@ -37,7 +41,7 @@ int main(int argc, char **argv)
     struct timeval t1, t2;
     double elapsedTime;
 
-    int type = vm["type"].as<unsigned int>(), shots = vm["shots"].as<unsigned int>(), r = vm["r"].as<unsigned int>();
+    int shots = vm["shots"].as<unsigned int>(), r = vm["r"].as<unsigned int>();
     bool isReorder = vm["reorder"].as<bool>(), isAlloc = vm["alloc"].as<bool>();
 
     std::random_device rd;
@@ -51,7 +55,7 @@ int main(int argc, char **argv)
     gettimeofday(&t1, NULL);
 
     assert(shots > 0);
-    Simulator simulator(type, shots, seed, r, isReorder, isAlloc);
+    Simulator simulator(shots, seed, 1, isReorder, isAlloc);
 
     if (vm.count("sim_qasm"))
     {
@@ -81,6 +85,5 @@ int main(int argc, char **argv)
     size_t memPeak = getPeakRSS();
     if (vm.count("print_info"))
         simulator.print_info(runtime, memPeak);
-
     return 0;
 }

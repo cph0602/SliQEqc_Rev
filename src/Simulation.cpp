@@ -26,7 +26,17 @@ void Simulator::init_simulator(int nQubits)
     if (isReorder) Cudd_AutodynEnable(manager, CUDD_REORDER_SYMM_SIFT);
 }
 
-
+bool Simulator::check_equ()
+{
+    if (Single_Bdd == Initial_BDD){
+        std::cout<<"Test "<<current_bit<<" succeeded."<<std::endl;
+        return true;
+    }
+    else{
+        std::cout<<"Test "<<current_bit<<" failed."<<std::endl;
+        return false;
+    }
+}
 /**Function*************************************************************
 
   Synopsis    [parse and simulate the qasm file]
@@ -38,10 +48,13 @@ void Simulator::init_simulator(int nQubits)
   SeeAlso     []
 
 ***********************************************************************/
-void Simulator::sim_qasm_file(std::string qasm)
+
+void Simulator::sim_qasm_eqc(int cur_bit)
 {
+    // std::cout<<n<<std::endl;
+    // std::cout<<cur_bit<<std::endl;
     std::string inStr;
-    std::stringstream inFile_ss(qasm);
+    std::stringstream inFile_ss(qasmfile);
     while (getline(inFile_ss, inStr))
     {
         inStr = inStr.substr(0, inStr.find("//"));
@@ -53,7 +66,7 @@ void Simulator::sim_qasm_file(std::string qasm)
             {
                 getline(inStr_ss, inStr, '[');
                 getline(inStr_ss, inStr, ']');
-                init_simulator(stoi(inStr));
+                // init_simulator(stoi(inStr));
             }
             else if (inStr == "creg")
             {
@@ -63,85 +76,13 @@ void Simulator::sim_qasm_file(std::string qasm)
             }
             else if (inStr == "OPENQASM"){;}
             else if (inStr == "include"){;}
-            else if (inStr == "measure")
-            {
-                isMeasure = 1;
-                getline(inStr_ss, inStr, '[');
-                getline(inStr_ss, inStr, ']');
-                int qIndex = stoi(inStr);
-                getline(inStr_ss, inStr, '[');
-                getline(inStr_ss, inStr, ']');
-                int cIndex = stoi(inStr);
-                measure(qIndex, cIndex);
-            }
             else
             {
                 if (inStr == "x")
                 {
                     getline(inStr_ss, inStr, '[');
                     getline(inStr_ss, inStr, ']');
-                    PauliX(stoi(inStr));
-                }
-                else if (inStr == "y")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    PauliY(stoi(inStr));
-                }
-                else if (inStr == "z")
-                {
-                    std::vector<int> iqubit(1);
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    iqubit[0] = stoi(inStr);
-                    PauliZ(iqubit);
-                    iqubit.clear();
-                }
-                else if (inStr == "h")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    Hadamard(stoi(inStr));
-                }
-                else if (inStr == "s")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    int iqubit = stoi(inStr);
-                    Phase_shift(2, iqubit);
-                }
-                else if (inStr == "sdg")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    int iqubit = stoi(inStr);
-                    Phase_shift_dagger(-2, iqubit);
-                }
-                else if (inStr == "t")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    int iqubit = stoi(inStr);
-                    Phase_shift(4, iqubit);
-                }
-                else if (inStr == "tdg")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    int iqubit = stoi(inStr);
-                    Phase_shift_dagger(-4, iqubit);
-                }
-                else if (inStr == "rx(pi/2)")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    rx_pi_2(stoi(inStr));
-                }
-                else if (inStr == "ry(pi/2)")
-                {
-                    getline(inStr_ss, inStr, '[');
-                    getline(inStr_ss, inStr, ']');
-                    ry_pi_2(stoi(inStr));
+                    PauliX(stoi(inStr), cur_bit);
                 }
                 else if (inStr == "cx")
                 {
@@ -154,21 +95,9 @@ void Simulator::sim_qasm_file(std::string qasm)
                     getline(inStr_ss, inStr, '[');
                     getline(inStr_ss, inStr, ']');
                     targ = stoi(inStr);
-                    Toffoli(targ, cont, ncont);
+                    Toffoli(targ, cont, ncont, cur_bit);
                     cont.clear();
                     ncont.clear();
-                }
-                else if (inStr == "cz")
-                {
-                    std::vector<int> iqubit(2);
-                    for (int i = 0; i < 2; i++)
-                    {
-                        getline(inStr_ss, inStr, '[');
-                        getline(inStr_ss, inStr, ']');
-                        iqubit[i] = stoi(inStr);
-                    }
-                    PauliZ(iqubit);
-                    iqubit.clear();
                 }
                 else if (inStr == "swap")
                 {
@@ -183,7 +112,7 @@ void Simulator::sim_qasm_file(std::string qasm)
                         else
                             swapB = stoi(inStr);
                     }
-                    Fredkin(swapA, swapB, cont);
+                    Fredkin(swapA, swapB, cont, cur_bit);
                     cont.clear();
                 }
                 else if (inStr == "cswap")
@@ -201,9 +130,23 @@ void Simulator::sim_qasm_file(std::string qasm)
                         else
                             swapB = stoi(inStr);
                     }
-                    Fredkin(swapA, swapB, cont);
+                    Fredkin(swapA, swapB, cont, cur_bit);
                     cont.clear();
                 }
+                // else if (inStr == "mcswap")
+                // {
+                //     std::vector<int> cont(0);
+                //     std::vector<int> ncont(0);
+                //     int targ;
+                //     getline(inStr_ss, inStr, '[');
+                //     while(getline(inStr_ss, inStr, ']'))
+                //     {
+                //         cont.push_back(stoi(inStr));
+                //         getline(inStr_ss, inStr, '[');
+                //     }
+                //     targ = cont.back();
+                //     cont.pop_back();
+                // }
                 else if (inStr == "ccx" || inStr == "mcx")
                 {
                     std::vector<int> cont(0);
@@ -217,7 +160,7 @@ void Simulator::sim_qasm_file(std::string qasm)
                     }
                     targ = cont.back();
                     cont.pop_back();
-                    Toffoli(targ, cont, ncont);
+                    Toffoli(targ, cont, ncont, cur_bit);
                     cont.clear();
                     ncont.clear();
                 }
@@ -230,9 +173,13 @@ void Simulator::sim_qasm_file(std::string qasm)
             }
         }
     }
-    if (isReorder) Cudd_AutodynDisable(manager);
+    // std::cout<<cur_bit<<std::endl;
+    // std::cout<<i<<std::endl;
+    // if (!check_equ()){
+    //     flag = false;
+    //     std::cout<<"The circuits are not equivalent."<<std::endl;
+    // }
 }
-
 /**Function*************************************************************
 
   Synopsis    [simulate the circuit described by a qasm file]
@@ -246,47 +193,42 @@ void Simulator::sim_qasm_file(std::string qasm)
 ***********************************************************************/
 void Simulator::sim_qasm(std::string qasm)
 {
-    sim_qasm_file(qasm); // simulate
-    
-    if (sim_type == 0 && isMeasure == 0)
+    std::string inStr0;
+    std::stringstream inFile_ss0(qasm);
+    bool flag = true;
+    while (getline(inFile_ss0, inStr0))
     {
-        std::cout << "Error: no measurement detected. Cannot do sampling.\n" << std::flush;
-        assert(sim_type != 0 || isMeasure != 0);
-    }
-    if (sim_type == 1)
-    {
-        if (isMeasure == 1)
+        inStr0 = inStr0.substr(0, inStr0.find("//"));
+        if (inStr0.find_first_not_of("\t\n ") != std::string::npos)
         {
-            std::cout << "Warning: measurement detected. The final statevector will collapse based on the measurement outcome.\n" << std::flush;
-            if (shots != 1)
+            std::stringstream inStr_ss0(inStr0);
+            getline(inStr_ss0, inStr0, ' ');
+            if (inStr0 == "qreg")
             {
-                shots = 1;
-                std::cout << "Warning: shot number is limited to 1 in all_amplitude mode.\n" << std::flush;
+                getline(inStr_ss0, inStr0, '[');
+                getline(inStr_ss0, inStr0, ']');
+                init_simulator(stoi(inStr0));
+                break;
             }
-        }    
-        else 
-        {
-            if (shots != 1)
-            {
-                std::cout << "Warning: no measurement detected. The --shots argument is ignored.\n" << std::flush;
-            }
-        }  
-    }
-
-    // measure based on simulator type
-    if (sim_type == 0) // sampling mode
-    {
-        measurement();
-    }
-    else if (sim_type == 1) // all_amplitude mode
-    {
-        if (isMeasure == 1)
-        {
-            measurement();
+            else {;}
         }
-        getStatevector();
     }
-    print_results();
+    qasmfile = qasm;
+    bool equivalent = true;
+    for(int i=0;i<n;i++){
+        sim_qasm_eqc(i);
+        if(Initial_BDD[i] == Single_Bdd[i]){
+            std::cout<<"Test "<<i<<" succeeded."<<std::endl;
+        }
+        else{
+            std::cout<<"Test "<<i<<" failed."<<std::endl;
+            equivalent = false;
+            break;
+        }
+        Cudd_RecursiveDeref(manager, Single_Bdd[i]);
+    }
+    if(equivalent) std::cout<<"Equivalent"<<std::endl;
+    else std::cout<<"not Equivalent"<<std::endl;
 }
 
 
