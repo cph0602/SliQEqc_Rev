@@ -1,7 +1,7 @@
 # SliQEqc_Rev - A BDD-simulation-based Reversible Circuit Equivalence Checker
 
 ## Introduction
-`SliQEqc_Rev` is a BDD-simulation-based reversible circuit equivalence checker implemented in C/C++ on top of [SliQSim]
+`SliQEqc_Rev` is a BDD-simulation-based reversible circuit equivalence checker implemented in C/C++ on top of `SliQSim`
 
 ## Build
 To build the simulator, one needs to first configure `CUDD`:
@@ -22,3 +22,5 @@ For example, to run the random benchmark 10_500.qasm in the [examples] folder, r
 ```commandline
 ./SliQSim --sim_qasm examples/10_500.qasm
 ```
+
+Note: If the circuits are originally in .real format and need to be converted to a miter in .qasm format, navigate to https://github.com/DrLava0602/Rev_Toolbox.
